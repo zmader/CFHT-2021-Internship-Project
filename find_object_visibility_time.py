@@ -1,5 +1,3 @@
-
-
 from multiprocessing import Value
 import astropy
 import astroplan
@@ -174,7 +172,7 @@ def main():
     #can now make a second function that can iterate through a bunch of calculate_time_visible() calls to get longer periods
     timeObservable = calculate_time_over_range(timeStart, timeEnd, declination, rightAscension, target)
 
-    print("Length of observability: ", timeObservable)
+    print("Total time of object observability: ", timeObservable)
 
     return
 
