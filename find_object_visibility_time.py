@@ -53,13 +53,13 @@ def get_end_date():
 
     #needs an error check for dates before the start date
     try:
-        endDate = input("Enter todays date (YYYY-MM-DD): ") #this would eventually be able to be changed to a time range for multiple days of viewing
+        endDate = input("Enter ending date (YYYY-MM-DD): ") #this would eventually be able to be changed to a time range for multiple days of viewing
         if not endDate:
             raise ValueError("empty string")
     except ValueError as e:
-        todayDate = datetime.today().strftime('%Y-%m-%d')
+        endDate = datetime.today().strftime('%Y-%m-%d')
 
-    time = Time('%s 19:00:00' % todayDate) #time is 4pm HST which should work as long as the sun doesn't suddenly start setting before then
+    time = Time('%s 19:00:00' % endDate) #time is 4pm HST which should work as long as the sun doesn't suddenly start setting before then
 
     return time
 
@@ -87,10 +87,6 @@ def calculate_time_visible(timeStart, dec, ra, target):
     nightLength = sunRise - sunSet
     timeObservable = nightLength * percentOfTimeVisible
 
-    print("Sunset at: ", sunSet)
-    print("Sunrise at: ", sunRise)
-    print("Length of night: ", nightLength)
-
     return timeObservable
 
 # calculate_time_over_range()
@@ -101,11 +97,13 @@ def calculate_time_visible(timeStart, dec, ra, target):
 #
 # Return: timeDelta (??) (hours the object is observable)
 #
-def calculate_time_over_range():
-    #while start < end
-    #add calculate_time_visible() to sum
-    #add one day of time to the start date
-    return
+def calculate_time_over_range(start, end, dec, ra, target):
+    totalVisibilityTime = calculate_time_visible(start, dec, ra, target)
+    while start < end: #calculate from start to end
+        #add one day of time to the start date
+        start = start + timedelta(days=1)
+        totalVisibilityTime = totalVisibilityTime + calculate_time_visible(start, dec, ra, target)
+    return totalVisibilityTime
 
 # get_right_ascension()
 #
@@ -161,7 +159,12 @@ def get_declination():
 def main():
 
     timeStart = get_start_date()
-    timeEnd = get_end_date() #not used yet
+    timeEnd = get_end_date()
+
+    #error check for end earlier than start
+    if timeEnd < timeStart:
+        timeEnd = timeStart
+
     rightAscension = get_right_ascension()
     declination = get_declination()
 
@@ -169,7 +172,7 @@ def main():
     target = [FixedTarget(coord=objectCoords, name="target1")]
 
     #can now make a second function that can iterate through a bunch of calculate_time_visible() calls to get longer periods
-    timeObservable = calculate_time_visible(timeStart, declination, rightAscension, target)
+    timeObservable = calculate_time_over_range(timeStart, timeEnd, declination, rightAscension, target)
 
     print("Length of observability: ", timeObservable)
 
