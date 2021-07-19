@@ -12,10 +12,14 @@ from astropy.table import Table
 from datetime import datetime, timedelta, date
 from astropy.units.cgs import C
 from dateutil import tz
+from astroplan.plots import plot_airmass
+from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+import sys
 
 TIMEZONE = tz.gettz() #need this because to_datetime will print UTC without any extra timezone info
 CFHT_SITE = Observer.at_site("cfht")
-constraints = [AltitudeConstraint(10*u.deg, 80*u.deg), AirmassConstraint(5), AtNightConstraint.twilight_civil()]
+constraints = [AltitudeConstraint(10*u.deg, 80*u.deg), AirmassConstraint(2), AtNightConstraint.twilight_civil()]
 
 # get_start_date()
 #
@@ -28,7 +32,7 @@ constraints = [AltitudeConstraint(10*u.deg, 80*u.deg), AirmassConstraint(5), AtN
 def get_start_date():
     todayDate = None
     try:
-        todayDate = input("Enter todays date (YYYY-MM-DD): ") #this would eventually be able to be changed to a time range for multiple days of viewing
+        todayDate = sys.argv[1] #this would eventually be able to be changed to a time range for multiple days of viewing
         if not todayDate:
             raise ValueError("empty string")
     except ValueError as e:
@@ -51,7 +55,7 @@ def get_end_date():
 
     #needs an error check for dates before the start date
     try:
-        endDate = input("Enter ending date (YYYY-MM-DD): ") #this would eventually be able to be changed to a time range for multiple days of viewing
+        endDate = sys.argv[2] #this would eventually be able to be changed to a time range for multiple days of viewing
         if not endDate:
             raise ValueError("empty string")
     except ValueError as e:
@@ -72,7 +76,7 @@ def get_end_date():
 #
 # Return: timeDelta (??) (hours the object is observable)
 #
-def calculate_time_visible(timeStart, dec, ra, target):
+def calculate_time_visible(timeStart, target):
     #find sunset/sunrise
     sunSet = CFHT_SITE.sun_set_time(timeStart, which="next").to_datetime(TIMEZONE)
     sunRise = CFHT_SITE.sun_rise_time(timeStart, which="next").to_datetime(TIMEZONE)
@@ -95,12 +99,16 @@ def calculate_time_visible(timeStart, dec, ra, target):
 #
 # Return: timeDelta (??) (hours the object is observable)
 #
-def calculate_time_over_range(start, end, dec, ra, target):
-    totalVisibilityTime = calculate_time_visible(start, dec, ra, target)
+def calculate_time_over_range(start, end, dec, ra):
+    objectCoords = SkyCoord(ra=(ra*u.deg), dec=(dec*u.deg))
+    target = [FixedTarget(coord=objectCoords, name="target1")]
+    totalVisibilityTime = calculate_time_visible(start, target)
+    #plot_airmass(target, CFHT_SITE, start)
+    #plt.show()
     while start < end: #calculate from start to end
         #add one day of time to the start date
         start = start + timedelta(days=1)
-        totalVisibilityTime = totalVisibilityTime + calculate_time_visible(start, dec, ra, target)
+        totalVisibilityTime = totalVisibilityTime + calculate_time_visible(start, target)
     return totalVisibilityTime
 
 # get_right_ascension()
@@ -114,7 +122,7 @@ def calculate_time_over_range(start, end, dec, ra, target):
 def get_right_ascension():
     ra = None
     try:
-        ra = float(input("Enter the right ascension of the desired object (degrees): "))
+        ra = float(sys.argv[3])
         if not ra:
             raise ValueError("empty string")
         elif ra > 360 or ra < 0:
@@ -135,7 +143,7 @@ def get_right_ascension():
 def get_declination():
     dec = None
     try:
-        dec = float(input("Enter the declination of the desired object (degrees): "))
+        dec = float(sys.argv[4])
         if not dec:
             raise ValueError("empty string")
         elif dec > 90 or dec < -90:
@@ -166,11 +174,8 @@ def main():
     rightAscension = get_right_ascension()
     declination = get_declination()
 
-    objectCoords = SkyCoord(ra=(rightAscension*u.deg), dec=(declination*u.deg))
-    target = [FixedTarget(coord=objectCoords, name="target1")]
-
     #can now make a second function that can iterate through a bunch of calculate_time_visible() calls to get longer periods
-    timeObservable = calculate_time_over_range(timeStart, timeEnd, declination, rightAscension, target)
+    timeObservable = calculate_time_over_range(timeStart, timeEnd, declination, rightAscension)
 
     print("Total time of object observability: ", timeObservable)
 
